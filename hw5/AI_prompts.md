@@ -158,7 +158,11 @@ _What was lacking: the first prompt did not say to save the build and test resul
 >
 > Print the essay here so I can read it first and make changes, and then we can push it to desk_tickets.html
 
-**Follow-up prompt:** _None yet._
+**Follow-up prompt:**
+
+> Yes, add and push
+
+_What was lacking: the first prompt asked me to print the essay for review before filling the tab, so the Reflection tab stayed empty until I approved the draft and said to add it._
 
 ## Problem 11: Submit to GitHub
 

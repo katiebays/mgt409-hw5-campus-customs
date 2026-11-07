@@ -101,6 +101,7 @@
   .money th { white-space: normal; }
   .money td:last-child { min-width: 280px; }
   .check { margin-top: 14px; border: 1px solid var(--ok); border-radius: 10px; padding: 10px 14px; color: var(--ok); }
+  .refl { max-width: 78ch; } .refl ol, .refl ul { padding-left: 22px; } .refl li { margin: 0 0 8px; }
 </style>
 </head>
 <body>
@@ -436,10 +437,57 @@
   </section>
 
   <!-- ============ Reflection ============ -->
-  <section role="tabpanel" id="panel-reflection" aria-labelledby="tab-reflection" tabindex="0" hidden>
-    <div class="card soon">
-      <h2>Reflection</h2>
-      <p>Coming later, in a later problem.</p>
+    <section role="tabpanel" id="panel-reflection" aria-labelledby="tab-reflection" tabindex="0" hidden>
+    <div class="head"><h2>Reflection: how the agent team did on the three tickets</h2></div>
+    <div class="card refl">
+
+      <h3 style="margin-top:0">How I'd judge each ticket</h3>
+      <p>I'd score every ticket on five things we can check from the audit trail, the database and our plan:</p>
+      <ol>
+        <li>The right agents were called, with no extras.</li>
+        <li>The numbers match the tables.</li>
+        <li>No money moved and nothing was sent without a person.</li>
+        <li>The shop can act on the result.</li>
+        <li>The trail explains itself.</li>
+      </ol>
+      <p>These match where Campus Customs can get hurt. A wrong number costs money, an unapproved payment costs more, and a reply that promises too much costs a customer.</p>
+      <ul>
+        <li><b>101 (Bulldog tee): good, with a judgment gap.</b> The facts were right: 0 in stock, a 10-tee reorder of about $80 arriving 2026-09-05, and invoice 501 for $840, 3 days overdue. The draft to Tauhid promised nothing. The gap is money. A person paid $840, the biggest line on the Cache tab, for a $28 order, and the team never asked whether invoice 501 and inventory's own $80 reorder are the same purchase. Accounting also left no ticket note.</li>
+        <li><b>102 (Rent due): right result, and the code did the saying no.</b> Facilities checked the email against lease 1 ($2,400, due 2026-09-02, two days out), and accounting saw that paying would leave $160. Accounting then called <code>pay_rent</code>, as its prompt tells it to, and the guardrail blocked it. The outcome is right, but the safety lives in the code, not in the agent.</li>
+        <li><b>103 (Bulk hoodies): strong, with one assumption.</b> It found 8 of 20 in stock, a 12-unit reorder of about $264 arriving 9/5, and a quote of $52.20 each ($1,044 for 20). The draft is honest and leaks no cost. We have no discount policy, so the 10% was the agent's own idea, flagged as pending approval.</li>
+      </ul>
+
+      <h3>Actual versus expected</h3>
+      <ul>
+        <li><b>101:</b> the same three specialists, with inventory first and 3 delegations, as planned. Accounting ran before customer service, which the plan allowed. It skipped <code>list_invoices</code> and <code>update_ticket</code>.</li>
+        <li><b>102:</b> facilities then accounting, nobody extra. The boss skipped <code>list_tickets</code>. Accounting tried <code>pay_rent</code>, which we said was acceptable if blocked.</li>
+        <li><b>103:</b> it matches on agents and order. Inventory raised the restock setting and found a vendor, which we predicted it might. The reply named a specific 10%, where we expected no percentage.</li>
+        <li><b>Overall:</b> 7 delegations, exactly the plan's 7 (all-hands would have been 12). The agents paid nothing, and people approved $3,240 ($3,400 down to $160, matching <code>cash_accounts</code>).</li>
+      </ul>
+
+      <h3>What would have been simpler as one agent</h3>
+      <p>Most of it.</p>
+      <ul>
+        <li><b>102:</b> facilities and accounting each called <code>get_ticket</code> and <code>get_cash_position</code> and wrote their own note. That is 8 specialist steps plus 4 for the boss. One agent with <code>get_lease</code>, <code>get_cash_position</code>, <code>update_ticket</code> and <code>pay_rent</code> needs about 4, by my estimate.</li>
+        <li><b>103:</b> inventory (6 steps) and customer service (4 steps) both fetched the ticket and the stock.</li>
+        <li><b>101:</b> accounting's whole contribution was two read-only steps.</li>
+        <li><b>Overall:</b> 14 of 41 steps were the boss routing. A single agent could probably do all three tickets in 15 to 18 steps.</li>
+      </ul>
+      <p>What splitting really buys is permissions. Only accounting holds <code>pay_rent</code> and <code>pay_invoice</code>, the boss can't write, and customer service can't pay. That argues for two agents (one with money tools, one without), not five.</p>
+
+      <h3>Three problems the team can already solve</h3>
+      <ol>
+        <li><b>Stockouts with a customer waiting.</b> The S tee and Crest Mug are at 0, and the L and XL tees are low. <code>suggest_restock</code> lists four items at $235 total, with vendors and arrival dates. <code>check_order</code> and a drafted reply handle the customer, as in 101.</li>
+        <li><b>Rent and bills colliding.</b> Rent due in 2 days plus a bill already 3 days overdue, against $3,400. <code>get_cash_position</code>, <code>list_invoices</code> and the approved payment tools sequence them. The Cache tab shows $3,400, then $2,560, then $160.</li>
+        <li><b>Bulk or discount requests.</b> <code>quote_price</code> shows the discount that still makes money (about 62% for navy hoodies), and inventory shows the partial fill, as in 103.</li>
+      </ol>
+
+      <h3>Three problems it can't solve yet</h3>
+      <ol>
+        <li><b>Refunds and wrong or damaged orders.</b> Tauhid's order exists only as a ticket row. Nothing records an order, a payment or a shipment, and there is no way to pay money back. We'd need an <code>orders</code> table, <code>get_order</code> and <code>issue_refund(order_id, amount, approved_by)</code> behind the same approval guard. We'd also need a returns agent, or Service Dan with read access and accounting paying.</li>
+        <li><b>Actually buying stock and receiving it.</b> The agents propose 10 tees and 12 hoodies but can't place or record a purchase. The only money tool pays invoices, and after we paid $840 the S tee still shows 0. We'd need <code>purchase_orders</code>, <code>place_purchase_order</code>, a <code>receive_shipment</code> that updates inventory, and a purchasing agent. A three-way match of order, receipt and invoice would answer the 501 question.</li>
+        <li><b>New customer emails, and sending replies.</b> The three tickets were handed to us, and the drafts to Tauhid and the AI Club never left the ticket. We'd need the planned Outlook server (read the inbox, <code>create_ticket</code>, <code>send_reply</code> after approval) and an intake agent that treats email text as untrusted, since a customer could write instructions into a ticket.</li>
+      </ol>
     </div>
   </section>
 </main>
