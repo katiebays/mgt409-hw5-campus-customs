@@ -1,0 +1,16 @@
+# secrets and local environments
+.env
+.venv/
+venv/
+
+# build output and caches
+__pycache__/
+*.pyc
+node_modules/
+dist/
+.vite/
+
+# OS and editor
+.DS_Store
+Thumbs.db
+desktop.ini

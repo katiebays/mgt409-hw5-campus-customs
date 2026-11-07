@@ -1,0 +1,6 @@
+# One environment runs the MCP server, the agent team and the API.
+pydantic-ai-slim[openai,mcp]
+python-dotenv
+fastapi
+uvicorn
+fastmcp
